@@ -1,15 +1,13 @@
 services:
   - type: web
     name: anime-api
-    runtime: node
+    env: node
     region: singapore
+    plan: free
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /api
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 4444
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: "*"
