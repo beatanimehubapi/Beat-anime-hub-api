@@ -1,4 +1,3 @@
-import * as proxyController from "../controllers/proxy.controller.js";
 import * as homeInfoController from "../controllers/homeInfo.controller.js";
 import * as categoryController from "../controllers/category.controller.js";
 import * as topTenController from "../controllers/topten.controller.js";
@@ -23,9 +22,6 @@ import * as filterController from "../controllers/filter.controller.js";
 import getTopSearch from "../controllers/topsearch.controller.js";
 
 export const createApiRoutes = (app, jsonResponse, jsonError) => {
-  
-  // PROXY VIDEO ROUTE - MUST BE FIRST!
-  app.get("/api/proxy-video", proxyController.proxyVideo);
   
   const createRoute = (path, controllerMethod) => {
     app.get(path, async (req, res) => {
