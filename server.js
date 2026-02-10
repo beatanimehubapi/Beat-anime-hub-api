@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import axios from "axios";
 import { createApiRoutes } from "./src/routes/apiRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,14 +27,17 @@ const jsonError = (res, message = "Internal server error", status = 500) =>
 
 // PROXY VIDEO ROUTE - Must be before other routes
 app.get("/api/proxy-video", async (req, res) => {
+  console.log('🎬 PROXY ROUTE HIT!', req.query);
+  
   try {
     const { url } = req.query;
     
     if (!url) {
+      console.log('❌ No URL provided');
       return res.status(400).json({ error: 'URL parameter required' });
     }
 
-    const axios = (await import("axios")).default;
+    console.log('📹 Proxying video from:', url);
     
     const response = await axios.get(url, {
       responseType: 'stream',
@@ -44,6 +48,8 @@ app.get("/api/proxy-video", async (req, res) => {
       }
     });
 
+    console.log('✅ Video fetched, streaming to client');
+
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', response.headers['content-type'] || 'application/x-mpegURL');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -52,10 +58,12 @@ app.get("/api/proxy-video", async (req, res) => {
     response.data.pipe(res);
     
   } catch (error) {
-    console.error('Proxy error:', error.message);
+    console.error('❌ Proxy error:', error.message);
     res.status(500).json({ error: 'Failed to proxy video' });
   }
 });
+
+console.log('✅ Proxy route registered at /api/proxy-video');
 
 // Create API routes
 createApiRoutes(app, jsonResponse, jsonError);
