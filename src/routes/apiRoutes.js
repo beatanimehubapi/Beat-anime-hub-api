@@ -87,5 +87,6 @@ export const createApiRoutes = (app, jsonResponse, jsonError) => {
   createRoute("/api/actors/:id", getVoiceActors);
   createRoute("/api/character/:id", getCharacter);
   createRoute("/api/top-search", getTopSearch);
-  createRoute("/api/proxy-video", proxyController.proxyVideo);
+    // Special route for video proxy - doesn't use createRoute wrapper
+  app.get("/api/proxy-video", proxyController.proxyVideo);
 };
