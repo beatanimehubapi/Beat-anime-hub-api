@@ -23,6 +23,10 @@ import * as filterController from "../controllers/filter.controller.js";
 import getTopSearch from "../controllers/topsearch.controller.js";
 
 export const createApiRoutes = (app, jsonResponse, jsonError) => {
+  
+  // PROXY VIDEO ROUTE - MUST BE FIRST!
+  app.get("/api/proxy-video", proxyController.proxyVideo);
+  
   const createRoute = (path, controllerMethod) => {
     app.get(path, async (req, res) => {
       try {
@@ -71,22 +75,14 @@ export const createApiRoutes = (app, jsonResponse, jsonError) => {
   createRoute("/api/filter", filterController.filter);
   createRoute("/api/search/suggest", suggestionsController.getSuggestions);
   createRoute("/api/schedule", scheduleController.getSchedule);
-  createRoute(
-    "/api/schedule/:id",
-    nextEpisodeScheduleController.getNextEpisodeSchedule
-  );
+  createRoute("/api/schedule/:id", nextEpisodeScheduleController.getNextEpisodeSchedule);
   createRoute("/api/random", randomController.getRandom);
   createRoute("/api/random/id", randomIdController.getRandomId);
   createRoute("/api/qtip/:id", qtipController.getQtip);
   createRoute("/api/producer/:id", producerController.getProducer);
-  createRoute(
-    "/api/character/list/:id",
-    characterListController.getVoiceActors
-  );
+  createRoute("/api/character/list/:id", characterListController.getVoiceActors);
   createRoute("/api/watchlist/:userId{/:page}", getWatchlist);
   createRoute("/api/actors/:id", getVoiceActors);
   createRoute("/api/character/:id", getCharacter);
   createRoute("/api/top-search", getTopSearch);
-    // Special route for video proxy - doesn't use createRoute wrapper
-  app.get("/api/proxy-video", proxyController.proxyVideo);
 };
