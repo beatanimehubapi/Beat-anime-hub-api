@@ -1,3 +1,4 @@
+import * as proxyController from "../controllers/proxy.controller.js";
 import * as homeInfoController from "../controllers/homeInfo.controller.js";
 import * as categoryController from "../controllers/category.controller.js";
 import * as topTenController from "../controllers/topten.controller.js";
