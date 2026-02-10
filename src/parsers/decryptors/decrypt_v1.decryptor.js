@@ -63,13 +63,17 @@ export async function decryptSources_v1(epID, id, name, type, fallback) {
       decryptedSources = rawSourceData;
     }
 
+    const originalUrl = fallback
+      ? (decryptedSources?.sources?.file ?? "")
+      : (decryptedSources?.sources?.[0].file ?? "");
+    
+    const proxyUrl = `https://beat-anistream-hub.onrender.com/api/proxy-video?url=${encodeURIComponent(originalUrl)}`;
+
     return {
       id,
       type,
       link: {
-        file: fallback
-          ? (decryptedSources?.sources?.file ?? "")
-          : (decryptedSources?.sources?.[0].file ?? ""),
+        file: proxyUrl,  // Changed to proxy URL
         type: "hls",
       },
       tracks: decryptedSources.tracks ?? [],
