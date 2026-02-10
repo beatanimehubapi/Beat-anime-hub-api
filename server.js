@@ -65,18 +65,38 @@ app.get("/api/proxy-video", async (req, res) => {
 
 console.log('✅ Proxy route registered at /api/proxy-video');
 
+// Test endpoint to verify routing works
+app.get("/api/test", (req, res) => {
+  res.json({ message: "API is working!", timestamp: new Date().toISOString() });
+});
+
 // Create API routes
 createApiRoutes(app, jsonResponse, jsonError);
 
 // Serve static files from dist directory
 app.use(express.static(path.join(__dirname, "dist")));
 
-// Serve index.html for all other routes (SPA)
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+// Serve index.html for all non-API routes (SPA)
+app.use((req, res, next) => {
+  // Skip if it's an API route
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  
+  // Try to serve index.html for SPA routes
+  const indexPath = path.join(__dirname, "dist", "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err.message);
+      next();
+    }
+  });
 });
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Registered routes:');
+  console.log('  GET /api/proxy-video - Video proxy');
+  console.log('  GET /api/test - Test endpoint');
 });
