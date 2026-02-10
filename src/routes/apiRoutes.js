@@ -87,4 +87,5 @@ export const createApiRoutes = (app, jsonResponse, jsonError) => {
   createRoute("/api/actors/:id", getVoiceActors);
   createRoute("/api/character/:id", getCharacter);
   createRoute("/api/top-search", getTopSearch);
+  createRoute("/api/proxy-video", proxyController.proxyVideo);
 };
