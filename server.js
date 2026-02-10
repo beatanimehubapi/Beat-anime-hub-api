@@ -1,64 +1,74 @@
-import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import path from "path";
-import fs from "fs";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
 import { createApiRoutes } from "./src/routes/apiRoutes.js";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 4444;
-const __filename = fileURLToPath(import.meta.url);
-const publicDir = path.join(dirname(__filename), "public");
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",");
+const PORT = process.env.PORT || 5000;
 
-app.use(
-  cors({
-    origin: allowedOrigins?.includes("*") ? "*" : allowedOrigins || [],
-    methods: ["GET"],
-  })
-);
+// Middleware
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  credentials: true
+}));
+app.use(express.json());
 
-// Custom CORS middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (
-    !allowedOrigins ||
-    allowedOrigins.includes("*") ||
-    (origin && allowedOrigins.includes(origin))
-  ) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    return next();
-  }
-  res
-    .status(403)
-    .json({ success: false, message: "Forbidden: Origin not allowed" });
-});
-
-app.use(express.static(publicDir, { redirect: false }));
-
+// Helper functions for JSON responses
 const jsonResponse = (res, data, status = 200) =>
   res.status(status).json({ success: true, results: data });
 
 const jsonError = (res, message = "Internal server error", status = 500) =>
   res.status(status).json({ success: false, message });
 
-createApiRoutes(app, jsonResponse, jsonError);
+// PROXY VIDEO ROUTE - Must be before other routes
+app.get("/api/proxy-video", async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'URL parameter required' });
+    }
 
-app.use((req, res) => {
-  const filePath = path.join(publicDir, "404.html");
-  if (fs.existsSync(filePath)) {
-    res.status(404).sendFile(filePath);
-  } else {
-    res.status(500).send("Error loading 404 page.");
+    const axios = (await import("axios")).default;
+    
+    const response = await axios.get(url, {
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://beat-anistream-hub.onrender.com',
+        'Origin': 'https://beat-anistream-hub.onrender.com'
+      }
+    });
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', response.headers['content-type'] || 'application/x-mpegURL');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    response.data.pipe(res);
+    
+  } catch (error) {
+    console.error('Proxy error:', error.message);
+    res.status(500).json({ error: 'Failed to proxy video' });
   }
 });
 
+// Create API routes
+createApiRoutes(app, jsonResponse, jsonError);
+
+// Serve static files from dist directory
+app.use(express.static(path.join(__dirname, "dist")));
+
+// Serve index.html for all other routes (SPA)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
+
+// Start server
 app.listen(PORT, () => {
-  console.info(`Listening at ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
