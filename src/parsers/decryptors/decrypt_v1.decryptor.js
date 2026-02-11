@@ -9,14 +9,12 @@ export async function decryptSources_v1(epID, id, name, type, fallback) {
   try {
     let decryptedSources = null;
     let iframeURL = null;
-
+    
     if (fallback) {
       const fallback_server = ["hd-1", "hd-3"].includes(name.toLowerCase())
         ? fallback_1
         : fallback_2;
-
       iframeURL = `https://${fallback_server}/stream/s-2/${epID}/${type}`;
-
       const { data } = await axios.get(
         `https://${fallback_server}/stream/s-2/${epID}/${type}`,
         {
@@ -41,39 +39,35 @@ export async function decryptSources_v1(epID, id, name, type, fallback) {
       const { data: sourcesData } = await axios.get(
         `https://${v4_base_url}/ajax/episode/sources?id=${id}`,
       );
-
       const ajaxLink = sourcesData?.link;
       if (!ajaxLink) throw new Error("Missing link in sourcesData");
-
       const sourceIdMatch = /\/([^/?]+)\?/.exec(ajaxLink);
       const sourceId = sourceIdMatch?.[1];
       if (!sourceId) throw new Error("Unable to extract sourceId from link");
-
       const baseUrlMatch = ajaxLink.match(
         /^(https?:\/\/[^\/]+(?:\/[^\/]+){3})/,
       );
       if (!baseUrlMatch) throw new Error("Could not extract base URL");
       const baseUrl = baseUrlMatch[1];
-
       iframeURL = `${baseUrl}/${sourceId}?k=1&autoPlay=0&oa=0&asi=1`;
-
       const { data: rawSourceData } = await axios.get(
         `${baseUrl}/getSources?id=${sourceId}`,
       );
       decryptedSources = rawSourceData;
     }
-
+    
     const originalUrl = fallback
       ? (decryptedSources?.sources?.file ?? "")
       : (decryptedSources?.sources?.[0].file ?? "");
     
-    const proxyUrl = `https://beat-anistream-hub.onrender.com/api/proxy-video?url=${encodeURIComponent(originalUrl)}`;
-
+    // FIXED: Use API URL instead of frontend URL
+    const proxyUrl = `https://anime-api-1ci7.onrender.com/api/proxy-video?url=${encodeURIComponent(originalUrl)}`;
+    
     return {
       id,
       type,
       link: {
-        file: proxyUrl,  // Changed to proxy URL
+        file: proxyUrl,  // Proxy URL pointing to API server
         type: "hls",
       },
       tracks: decryptedSources.tracks ?? [],
