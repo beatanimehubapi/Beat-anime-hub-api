@@ -280,5 +280,3 @@ app.listen(PORT, () => {
   console.log(`🔥 Ultimate Proxy enabled for CDN bypass`);
 });
 
-
--100?ep=1&server=hd-1&type=sub
