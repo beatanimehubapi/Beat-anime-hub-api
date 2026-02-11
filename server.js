@@ -26,6 +26,16 @@ const jsonError = (res, message = "Internal server error", status = 500) =>
   res.status(status).json({ success: false, message });
 
 // PROXY VIDEO ROUTE - Must be before other routes
+
+// Handle OPTIONS for CORS preflight
+app.options("/api/proxy-video", (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(204).send();
+});
+
 app.get("/api/proxy-video", async (req, res) => {
   console.log('🎬 PROXY ROUTE HIT!', req.query);
   
@@ -37,42 +47,98 @@ app.get("/api/proxy-video", async (req, res) => {
       return res.status(400).json({ error: 'URL parameter required' });
     }
 
-    console.log('📹 Proxying video from:', url);
+    console.log('📹 Proxying:', url);
     
-    // Extract domain from URL for better referer
+    // Parse URL to get domain
     const urlObj = new URL(url);
-    const domain = urlObj.origin;
+    const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+    const pathOnly = urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/') + 1);
+    
+    // Determine if this is a playlist or video segment
+    const isPlaylist = url.includes('.m3u8');
     
     const response = await axios.get(url, {
-      responseType: 'stream',
+      responseType: isPlaylist ? 'text' : 'stream',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'identity',
-        'Referer': domain + '/',
-        'Origin': domain,
-        'Connection': 'keep-alive',
+        'Referer': baseUrl + '/',
+        'Origin': baseUrl,
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin'
+        'Sec-Fetch-Site': 'cross-site'
       },
       timeout: 30000,
-      maxRedirects: 5
+      validateStatus: (status) => status < 500
     });
 
-    console.log('✅ Video fetched, streaming to client');
-
+    // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', response.headers['content-type'] || 'application/x-mpegURL');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Expose-Headers', '*');
     
-    response.data.pipe(res);
+    if (isPlaylist) {
+      console.log('✅ Playlist fetched, rewriting URLs');
+      
+      let playlist = response.data;
+      
+      // Rewrite relative URLs in the playlist to go through proxy
+      const lines = playlist.split('\n');
+      const rewrittenLines = lines.map(line => {
+        // Skip comments and empty lines
+        if (line.startsWith('#') || line.trim() === '') {
+          return line;
+        }
+        
+        // If it's a relative URL or full URL
+        let targetUrl;
+        if (line.startsWith('http://') || line.startsWith('https://')) {
+          targetUrl = line.trim();
+        } else if (line.trim()) {
+          // Relative URL - make it absolute
+          targetUrl = baseUrl + pathOnly + line.trim();
+        } else {
+          return line;
+        }
+        
+        // Rewrite to go through our proxy
+        const proxiedUrl = `https://anime-api-1ci7.onrender.com/api/proxy-video?url=${encodeURIComponent(targetUrl)}`;
+        return proxiedUrl;
+      });
+      
+      const rewrittenPlaylist = rewrittenLines.join('\n');
+      
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      res.send(rewrittenPlaylist);
+      
+    } else {
+      console.log('✅ Video segment fetched, streaming');
+      
+      // Stream video segments
+      res.setHeader('Content-Type', response.headers['content-type'] || 'video/mp2t');
+      
+      if (response.headers['content-length']) {
+        res.setHeader('Content-Length', response.headers['content-length']);
+      }
+      if (response.headers['content-range']) {
+        res.setHeader('Content-Range', response.headers['content-range']);
+      }
+      
+      response.data.pipe(res);
+    }
     
   } catch (error) {
     console.error('❌ Proxy error:', error.message);
-    res.status(500).json({ error: 'Failed to proxy video', details: error.message });
+    
+    // Return error but with CORS headers so frontend sees it
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.status(error.response?.status || 500).json({ 
+      error: 'Proxy failed', 
+      details: error.message,
+      status: error.response?.status 
+    });
   }
 });
 
