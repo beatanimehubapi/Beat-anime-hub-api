@@ -73,26 +73,6 @@ app.get("/api/test", (req, res) => {
 // Create API routes
 createApiRoutes(app, jsonResponse, jsonError);
 
-// Serve static files from dist directory
-app.use(express.static(path.join(__dirname, "dist")));
-
-// Serve index.html for all non-API routes (SPA)
-app.use((req, res, next) => {
-  // Skip if it's an API route
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
-  
-  // Try to serve index.html for SPA routes
-  const indexPath = path.join(__dirname, "dist", "index.html");
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error('Error serving index.html:', err.message);
-      next();
-    }
-  });
-});
-
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
