@@ -60,14 +60,15 @@ export async function decryptSources_v1(epID, id, name, type, fallback) {
       ? (decryptedSources?.sources?.file ?? "")
       : (decryptedSources?.sources?.[0].file ?? "");
     
-    // FIXED: Use API URL instead of frontend URL
+    // Proxy URL for your API
     const proxyUrl = `https://anime-api-1ci7.onrender.com/api/proxy-video?url=${encodeURIComponent(originalUrl)}`;
     
     return {
       id,
       type,
       link: {
-        file: proxyUrl,  // Proxy URL pointing to API server
+        file: proxyUrl,        // ✅ Proxied URL (should work with CORS)
+        original: originalUrl,  // ✅ Direct URL (backup, may have CORS issues)
         type: "hls",
       },
       tracks: decryptedSources.tracks ?? [],
