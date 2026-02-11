@@ -39,13 +39,26 @@ app.get("/api/proxy-video", async (req, res) => {
 
     console.log('📹 Proxying video from:', url);
     
+    // Extract domain from URL for better referer
+    const urlObj = new URL(url);
+    const domain = urlObj.origin;
+    
     const response = await axios.get(url, {
       responseType: 'stream',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://beat-anistream-hub.onrender.com',
-        'Origin': 'https://beat-anistream-hub.onrender.com'
-      }
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'identity',
+        'Referer': domain + '/',
+        'Origin': domain,
+        'Connection': 'keep-alive',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin'
+      },
+      timeout: 30000,
+      maxRedirects: 5
     });
 
     console.log('✅ Video fetched, streaming to client');
@@ -59,7 +72,7 @@ app.get("/api/proxy-video", async (req, res) => {
     
   } catch (error) {
     console.error('❌ Proxy error:', error.message);
-    res.status(500).json({ error: 'Failed to proxy video' });
+    res.status(500).json({ error: 'Failed to proxy video', details: error.message });
   }
 });
 
